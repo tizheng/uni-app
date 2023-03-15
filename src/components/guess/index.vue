@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { guessLikeListReES } from '@/types/home'
+import type { guessLikeListEL, guessLikeItem } from '@/types/home'
 defineProps<{
-  source: guessLikeListReES
+  source: guessLikeListEL[]
 }>()
 </script>
 
@@ -16,8 +16,8 @@ defineProps<{
       class="navigator"
       v-for="item in source"
     >
-      <image class="image" mode="aspectFill" :src="item.picture"></image>
-      <view class="name">{{ item.name }}</view>
+      <image class="image" mode="aspectFill" :src="item.items.picture"></image>
+      <view class="name">{{ item.items.name }}</view>
       <view class="price">
         <text class="small">¥</text>{{ item.price
         }}<text class="small">.00</text>

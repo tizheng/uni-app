@@ -4,6 +4,8 @@ import type {
   getHotListRES,
   getNewListRES,
   guessLikeListReES,
+  guessLikeList,
+  guessLikeListEL,
 } from '@/types/home'
 import http from '@/utils/http'
 export const getBanner = (distributionSite: number = 1) => {
@@ -37,7 +39,7 @@ export const getNewList = (limit: number = 4) => {
   })
 }
 export const getGuessLike = (page: number = 1, pageSize: number = 10) => {
-  return http<guessLikeListReES>({
+  return http<guessLikeListEL>({
     url: 'https://pcapi-xiaotuxian-front.itheima.net/home/goods/guessLike',
     method: 'GET',
     data: {

@@ -5,7 +5,7 @@ let cursorLeft = $ref('0%')
 
 // 组件属性
 defineProps<{
-  source: getCategoryList[]
+  source: getCategoryList
 }>()
 
 // 滚动事件

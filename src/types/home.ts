@@ -89,7 +89,7 @@ export interface NewList {
   price: number
 }
 export type getNewListRES = NewList[]
-export interface guessLikeList {
+export interface guessLikeListEL {
   /**
    * 总条数
    */
@@ -142,4 +142,4 @@ export interface guessLikeItem {
    */
   price: number
 }
-export type guessLikeListReES = guessLikeItem[]
+// export type guessLikeListReES = guessLikeList[]

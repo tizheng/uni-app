@@ -9,8 +9,7 @@ import type {
   getCategoryList,
   getHotListRES,
   getNewListRES,
-  guessLikeListReES,
-  guessLikeItem,
+  guessLikeListEL,
 } from '@/types/home'
 import { ref } from 'vue'
 import {
@@ -31,7 +30,7 @@ let bannerData = ref<getBannerList>([])
 let categoryData = ref<getCategoryList>([])
 let getHotMutliList = ref<getHotListRES>([])
 let getNewListEls = ref<getNewListRES>([])
-const guessLikeRes = ref<guessLikeListReES>([])
+const guessLikeRes = ref<guessLikeListEL>()
 
 const initTableList = async () => {
   const res = await getBanner()
@@ -55,7 +54,7 @@ const initNewList = async () => {
 }
 const initGetGuessList = async () => {
   const res = await getGuessLike()
-  guessLikeRes.value = res.result.items
+  guessLikeRes.value = res.result
 }
 onLoad(() => {
   initGetBannerList()
