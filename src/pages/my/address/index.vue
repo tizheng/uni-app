@@ -1,60 +1,80 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-
-const list = ref([
-  {
-    id: '1570666985186922497',
-    receiver: '苏东坡',
-    contact: '12345678910',
-    provinceCode: '110000',
-    cityCode: '110100',
-    countyCode: '110101',
-    address: '东城幼儿园',
-    isDefault: 1,
-    fullLocation: '北京北京市东城区',
-    postalCode: null,
-    addressTags: null,
-  },
-  {
-    id: '1570667367564840961',
-    receiver: '苏南平',
-    contact: '13535337057',
-    provinceCode: '110000',
-    cityCode: '110100',
-    countyCode: '110101',
-    address: '吉山幼儿园',
-    isDefault: 0,
-    fullLocation: '广东省广州市天河区',
-    postalCode: null,
-    addressTags: null,
-  },
-  {
-    id: '1570676278636318722',
-    receiver: '苏希璐',
-    contact: '13345678901',
-    provinceCode: '110000',
-    cityCode: '110100',
-    countyCode: '110101',
-    address: '东城加油站',
-    isDefault: 0,
-    fullLocation: '北京北京市东城区',
-    postalCode: null,
-    addressTags: null,
-  },
-  {
-    id: '1570711884447879169',
-    receiver: '苏北乔',
-    contact: '13535337057',
-    provinceCode: '440000',
-    cityCode: '440100',
-    countyCode: '440106',
-    address: '津安创意园',
-    isDefault: 0,
-    fullLocation: '广东省广州市天河区',
-    postalCode: null,
-    addressTags: null,
-  },
-])
+import { Address } from '@/types/address'
+import { onLoad } from '@dcloudio/uni-app'
+import { getAddressList, delAddress } from '@/service/address'
+const list = ref<Address[]>()
+const initGetAddressList = async () => {
+  const res = await getAddressList()
+  list.value = res.result
+}
+const handleDel = async (id: String) => {
+  await delAddress(id)
+  //删除成功
+  uni.showToast({
+    title: '删除成功',
+    icon: 'success',
+    mask: true,
+  })
+  initGetAddressList()
+}
+onLoad(() => {
+  initGetAddressList()
+})
+// const list = ref([
+//   {
+//     id: '1570666985186922497',
+//     receiver: '苏东坡',
+//     contact: '12345678910',
+//     provinceCode: '110000',
+//     cityCode: '110100',
+//     countyCode: '110101',
+//     address: '东城幼儿园',
+//     isDefault: 1,
+//     fullLocation: '北京北京市东城区',
+//     postalCode: null,
+//     addressTags: null,
+//   },
+//   {
+//     id: '1570667367564840961',
+//     receiver: '苏南平',
+//     contact: '13535337057',
+//     provinceCode: '110000',
+//     cityCode: '110100',
+//     countyCode: '110101',
+//     address: '吉山幼儿园',
+//     isDefault: 0,
+//     fullLocation: '广东省广州市天河区',
+//     postalCode: null,
+//     addressTags: null,
+//   },
+//   {
+//     id: '1570676278636318722',
+//     receiver: '苏希璐',
+//     contact: '13345678901',
+//     provinceCode: '110000',
+//     cityCode: '110100',
+//     countyCode: '110101',
+//     address: '东城加油站',
+//     isDefault: 0,
+//     fullLocation: '北京北京市东城区',
+//     postalCode: null,
+//     addressTags: null,
+//   },
+//   {
+//     id: '1570711884447879169',
+//     receiver: '苏北乔',
+//     contact: '13535337057',
+//     provinceCode: '440000',
+//     cityCode: '440100',
+//     countyCode: '440106',
+//     address: '津安创意园',
+//     isDefault: 0,
+//     fullLocation: '广东省广州市天河区',
+//     postalCode: null,
+//     addressTags: null,
+//   },
+// ])
 </script>
 
 <template>
@@ -72,7 +92,7 @@ const list = ref([
               <view class="user">
                 {{ item.receiver }}
                 <text>{{ item.contact }}</text>
-                <text class="badge"> 默认 </text>
+                <text class="badge" v-if="item.isDefault"> 默认 </text>
               </view>
               <view class="locate">
                 {{ item.fullLocation }}{{ item.address }}
@@ -87,7 +107,9 @@ const list = ref([
             </view>
             <template v-slot:right>
               <view class="swipe-cell-action">
-                <button class="delete-button"> 删除 </button>
+                <button class="delete-button" @click="handleDel(item.id)">
+                  删除
+                </button>
               </view>
             </template>
           </uni-swipe-action-item>

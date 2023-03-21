@@ -1,111 +1,79 @@
 <script setup lang="ts">
 import guess from '@/components/guess/index.vue'
+import { useUserStore } from '@/store/member'
 import { ref } from 'vue'
-
-let cartList = ref([
-  {
-    id: '3434008',
-    skuId: '3673386',
-    name: '木天蓼逗猫棍15克',
-    attrsText: '商品:猫咪逗猫棍 ',
-    specs: [],
-    picture:
-      'https://yanxuan-item.nosdn.127.net/674ec7a88de58a026304983dd049ea69.jpg',
-    price: '16.00',
-    nowPrice: '16.00',
-    nowOriginalPrice: '16.00',
-    selected: true,
-    stock: 2936,
-    count: 1,
-    isEffective: true,
-    discount: null,
-    isCollect: false,
-    postFee: 1.0,
-  },
-  {
-    id: '3996846',
-    skuId: '300256547',
-    name: '国家非遗木叶盏，经典木叶茶具套装',
-    attrsText: '规格:经典木叶茶具套装一套（一壶两盏） ',
-    specs: [],
-    picture:
-      'https://yanxuan-item.nosdn.127.net/c9f3dc9792ce78a215d9ea9c14f9aad8.jpg',
-    price: '609.00',
-    nowPrice: '609.00',
-    nowOriginalPrice: '609.00',
-    selected: true,
-    stock: 4241,
-    count: 2,
-    isEffective: true,
-    discount: null,
-    isCollect: false,
-    postFee: 5.0,
-  },
-  {
-    id: '3997966',
-    skuId: '300265228',
-    name: '个大体肥，冷冻对虾400g',
-    attrsText: '规格:400g（50-60只/kg） ',
-    specs: [],
-    picture:
-      'https://yanxuan-item.nosdn.127.net/01dd5a65d131453074631d82d8f80d91.jpg',
-    price: '39.90',
-    nowPrice: '39.90',
-    nowOriginalPrice: '39.90',
-    selected: true,
-    stock: 2679,
-    count: 3,
-    isEffective: true,
-    discount: null,
-    isCollect: false,
-    postFee: 8.0,
-  },
-  {
-    id: '4004328',
-    skuId: '300338662',
-    name: '儿童多色圆领印花短袖T恤110-160cm',
-    attrsText: '颜色:本白 尺码:160cm ',
-    specs: [],
-    picture:
-      'https://yanxuan-item.nosdn.127.net/ddb4a80ac97a175bc633f0a53076815a.jpg',
-    price: '59.00',
-    nowPrice: '59.00',
-    nowOriginalPrice: '59.00',
-    selected: true,
-    stock: 422,
-    count: 4,
-    isEffective: true,
-    discount: null,
-    isCollect: false,
-    postFee: 7.0,
-  },
-])
-
+import { getGuessLike } from '@/service/banner'
+import type { guessLikeListReES } from '@/types/home'
+import { onLoad } from '@dcloudio/uni-app'
+import type { cartListResult, UpdateCartResult } from '@/types/cart'
+import { updateChecked } from '@/service/cart'
+import { getCarts, checkAll } from '@/service/cart'
+// import throttle from 'lodash/throttle'
+const cartList = ref<cartListResult[]>([])
+const initCart = async () => {
+  const res = await getCarts()
+  cartList.value = res.result
+}
+const guessLikeList = ref<guessLikeListReES>([])
+const initGuessLike = async () => {
+  const res = await getGuessLike()
+  guessLikeList.value = res.result.items
+}
+const goLogin = () => {
+  uni.navigateTo({
+    url: '/pages/login/index',
+  })
+}
+let flag: number = 0
+let timer: number = 0
+const increase = async (item: UpdateCartResult) => {
+  if (flag) return
+  flag = 1
+  await updateChecked(item.skuId, { count: ++item.count })
+  initCart()
+  clearTimeout(timer)
+  timer = setTimeout(() => {
+    flag = 0
+  }, 500)
+}
+const handleChecked = async (id: string, selected: boolean) => {
+  await updateChecked(id, { selected: !selected })
+  selected = !selected
+  initCart()
+}
+const handlleCheckAll = async () => {
+  const ids = cartList.value.map((item) => item.skuId)
+  cartList.value.map((item) => (item.selected = !item.selected))
+  const flag = cartList.value.every((item) => item.selected)
+  await checkAll(flag, ids)
+}
+onLoad(() => {
+  initGuessLike()
+  initCart()
+})
+const member = useUserStore()
 const goPay = () => {
   uni.navigateTo({
     url: '/pages/order/index',
   })
 }
 </script>
-
 <template>
   <scroll-view scroll-y enhanced :show-scrollbar="false" class="viewport">
     <!-- 顶部工具栏 -->
-    <view class="topbar" v-if="false">
+    <view class="topbar" v-if="member.isLogin">
       <view class="locate">顺义区后沙峪地区</view>
       <view class="extra">
         <text class="edit">编辑</text>
         <text class="menu"></text>
       </view>
     </view>
-
-    <template v-if="true">
+    <template v-if="member.isLogin">
       <!-- 优惠提示 -->
       <view class="tips">
         <text class="label">满减</text>
         <text class="desc">满1件, 即可享受9折优惠</text>
       </view>
-
       <!-- 购物车商品 -->
       <view class="carts">
         <uni-swipe-action>
@@ -124,6 +92,7 @@ const goPay = () => {
                   'checkbox',
                   `icon-${item.selected ? 'checked' : 'ring'}`,
                 ]"
+                @tap.stop="handleChecked(item.skuId, item.selected)"
               ></text>
               <!-- 商品缩略图 -->
               <image class="thumb" :src="item.picture"></image>
@@ -138,11 +107,10 @@ const goPay = () => {
                 <view class="quantity">
                   <text class="text">-</text>
                   <input class="input" type="text" :value="item.count" />
-                  <text class="text">+</text>
+                  <text class="text" @tap.stop="increase(item)">+</text>
                 </view>
               </view>
             </navigator>
-
             <template v-slot:right>
               <view class="swipe-cell-action">
                 <button class="collect-button">移入收藏</button>
@@ -155,18 +123,18 @@ const goPay = () => {
     </template>
 
     <!-- 状态提示 -->
-    <view class="blank" v-if="false">
+    <view class="blank" v-if="!member.isLogin">
       <text>登后后可查看购物车中的商品</text>
-      <button class="button">去登录</button>
+      <button class="button" @tap="goLogin">去登录</button>
     </view>
 
     <!-- 猜你喜欢 -->
-    <guess :source="[]"></guess>
+    <guess :source="guessLikeList"></guess>
   </scroll-view>
 
   <!-- 吸底工具栏 -->
-  <view class="toolbar" v-if="true">
-    <text class="all">全选</text>
+  <view class="toolbar" v-if="member.isLogin">
+    <text class="all" @tap="handlleCheckAll">全选</text>
     <text class="text">合计:</text>
     <text class="amount">266.00</text>
     <!-- 操作按钮 -->

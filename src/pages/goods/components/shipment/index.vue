@@ -1,27 +1,23 @@
 <template>
   <view class="title">配送至</view>
   <view class="shipment">
-    <view class="item">
-      <view class="user">李明 13824686868</view>
-      <view class="address">北京市顺义区后沙峪地区安平北街6号院</view>
+    <view class="item" v-for="item in goodsList">
+      <view class="user">{{ item.receiver }} {{ item.contact }}</view>
+      <view class="address">{{ item.fullLocation }}</view>
       <text class="icon icon-checked"></text>
     </view>
-    <view class="item">
-      <view class="user">王东 13824686868</view>
-      <view class="address">北京市顺义区后沙峪地区安平北街6号院</view>
-      <text class="icon icon-ring"></text>
-    </view>
-    <view class="item">
-      <view class="user">张三 13824686868</view>
-      <view class="address">北京市朝阳区孙河安平北街6号院</view>
-      <text class="icon icon-ring"></text>
-    </view>
-  </view>
-  <view class="footer">
-    <view class="button primary"> 新建地址 </view>
-    <view v-if="false" class="button primary">确定</view>
   </view>
 </template>
+
+<script setup lang="ts">
+import { address } from '@/types/goods'
+
+defineProps<{
+  goodsList: address[]
+}>()
+</script>
+
+<style></style>
 
 <style>
 .shipment {

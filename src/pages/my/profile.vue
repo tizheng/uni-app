@@ -1,17 +1,87 @@
 <script setup lang="ts">
-import { toRef } from 'vue'
+import { toRef, ref } from 'vue'
 import useAppStore from '@/store'
-
+import { onLoad } from '@dcloudio/uni-app'
+import { getUserInfo, editUserInfo } from '@/service/user'
+import type { Gender, UserInfo } from '@/types/user'
+import { uploadFileWithUrl } from '@/service/user'
+import { useUserStore } from '@/store/member'
+import { storeToRefs } from 'pinia'
 const appStore = useAppStore()
 const safeArea = toRef(appStore, 'safeArea')
-
+const member = useUserStore()
+const { profile } = storeToRefs(member)
 const goBack = () => {
   uni.navigateBack({})
 }
 
 const chooseImage = () => {
-  uni.chooseImage({})
+  uni.chooseImage({
+    count: 1, // 最多选择的图片数量，默认9
+    sizeType: ['original', 'compressed'], // 所选的图片尺寸，original 原图，compressed 压缩图，默认二者都有
+    sourceType: ['album', 'camera'], // 所选的图片来源，album 从相册选图，camera 使用相机，默认二者都有
+    success: function (res) {
+      // 选择成功后的回调函数负责处理选好的图片信息
+      //上传中消息提示
+      uni.showLoading({
+        title: '上传中',
+        mask: true,
+      })
+      const tempFilePaths = res.tempFilePaths
+      uploadFileWithUrl('/member/profile/avatar', tempFilePaths[0], 'file')
+        .then(async (res: any) => {
+          const parseRes = JSON.parse(res)
+          profile.value.avatar = parseRes.result.avatar
+          userInfo.value.avatar = parseRes.result.avatar
+        })
+        .catch((err) => {
+          console.error(err)
+        })
+    },
+  })
 }
+const userInfo = ref<UserInfo>({} as UserInfo)
+const initGetUserInfo = async () => {
+  const res = await getUserInfo()
+  userInfo.value = res.result
+  profile.value.nickname = userInfo.value.nickname
+}
+const onRadioChange = (e: WechatMiniprogram.RadioGroupChange) => {
+  userInfo.value.gender = e.detail.value as Gender
+}
+const onDateChange = (e: WechatMiniprogram.PickerChange) => {
+  userInfo.value.birthday = e.detail.value as string
+}
+let selectedLocationCode: string[] = []
+const onChangeCity = (e: WechatMiniprogram.PickerChange) => {
+  userInfo.value.fullLocation = (
+    e.detail.value as [string, string, string]
+  ).join('')
+  selectedLocationCode = e.detail.code
+}
+const submitForm = async () => {
+  const { birthday, gender, nickname, profession } = userInfo.value
+  const [provinceCode, cityCode, countyCode] = selectedLocationCode
+
+  await editUserInfo({
+    birthday,
+    gender,
+    nickname,
+    profession,
+    provinceCode,
+    cityCode,
+    countyCode,
+  })
+  await uni.showToast({ title: '修改成功~' })
+  setTimeout(() => {
+    uni.navigateBack({
+      delta: 1,
+    })
+  }, 500)
+}
+onLoad(() => {
+  initGetUserInfo()
+})
 </script>
 
 <template>
@@ -23,52 +93,74 @@ const chooseImage = () => {
     <scroll-view scroll-y>
       <!-- 头像 -->
       <view class="avatar">
-        <image
-          @tap="chooseImage"
-          src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/avatar_3.jpg"
-        />
+        <image @tap="chooseImage" :src="userInfo.avatar" />
         <text>点击修改头像</text>
       </view>
       <!-- 用户信息 -->
-      <view class="form">
-        <view class="form-item">
-          <text class="label">账号</text>
-          <input value="26219453547" />
+      <form @submit="" @reset="">
+        <view class="form">
+          <view class="form-item">
+            <text class="label">账号</text>
+            <input
+              :disabled="true"
+              v-model="userInfo.account"
+              class="hover-to-disable"
+            />
+          </view>
+          <view class="form-item">
+            <text class="label">昵称</text>
+            <input v-model="userInfo.nickname" />
+          </view>
+          <view class="form-item">
+            <text class="label">性别</text>
+            <radio-group @change="onRadioChange">
+              <label class="radio">
+                <radio
+                  value="男"
+                  color="#27ba9b"
+                  :checked="userInfo.gender === '男'"
+                />
+                男
+              </label>
+              <label class="radio">
+                <radio
+                  value="女"
+                  color="#27ba9b"
+                  :checked="userInfo.gender === '女'"
+                />
+                女
+              </label>
+            </radio-group>
+          </view>
+          <view class="form-item">
+            <text class="label">出生日期</text>
+            <picker
+              mode="date"
+              start="2015-09-01"
+              end="2017-09-01"
+              @change="onDateChange"
+            >
+              <view>{{
+                userInfo.birthday ? userInfo.birthday : '请选择出生日期'
+              }}</view>
+            </picker>
+          </view>
+          <view class="form-item">
+            <text class="label">城市</text>
+            <picker mode="region" @change="onChangeCity">
+              <view>{{
+                userInfo.fullLocation ? userInfo.fullLocation : '请选择城市'
+              }}</view>
+            </picker>
+          </view>
+          <view class="form-item">
+            <text class="label">职业</text>
+            <input v-model="userInfo.profession" />
+          </view>
         </view>
-        <view class="form-item">
-          <text class="label">昵称</text>
-          <input value="张三" />
-        </view>
-        <view class="form-item">
-          <text class="label">性别</text>
-          <radio-group>
-            <label class="radio">
-              <radio value="男" color="#27ba9b" :checked="true" /> 男
-            </label>
-            <label class="radio">
-              <radio value="女" color="#27ba9b" /> 女
-            </label>
-          </radio-group>
-        </view>
-        <view class="form-item">
-          <text class="label">出生日期</text>
-          <picker mode="date" start="2015-09-01" end="2017-09-01">
-            <view>2021-01-02</view>
-          </picker>
-        </view>
-        <view class="form-item">
-          <text class="label">城市</text>
-          <picker mode="region">
-            <view>北京</view>
-          </picker>
-        </view>
-        <view class="form-item">
-          <text class="label">职业</text>
-          <input value="伙夫" />
-        </view>
-      </view>
+      </form>
       <!-- 提交按钮 -->
-      <view class="button">保 存</view>
+      <view class="button" @tap="submitForm">保 存</view>
     </scroll-view>
   </view>
 </template>
@@ -182,5 +274,8 @@ page {
   border-radius: 80rpx;
   font-size: 30rpx;
   background-color: #27ba9b;
+}
+.hover-to-disable:disabled {
+  background-color: #e9ecef;
 }
 </style>

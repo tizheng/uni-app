@@ -1,5 +1,12 @@
 <script setup lang="ts">
-defineProps<{ buttonType: string }>()
+import { getCategory } from '@/service/banner'
+import { GoodsResult, ResultSpec } from '@/types/goods'
+import { ref } from 'vue'
+import { Value } from '@/types/goods'
+const props = defineProps<{
+  buttonType: string
+  goodsList: GoodsResult
+}>()
 
 const goCart = () => {
   uni.navigateTo({
@@ -12,24 +19,34 @@ const goOrder = () => {
     url: '/pages/order/create/index',
   })
 }
+const price = ref(1)
+const increment = () => {
+  price.value++
+}
+const active = ref(0)
+const handleActive = (category: Value) => {
+  props.goodsList.specs.forEach((item: ResultSpec) => {
+    item.values.forEach((category: Value) => {
+      category.active = false
+    })
+  })
+  category.active = true
+}
 </script>
 
 <template>
   <view class="header">
-    <image
-      class="thumb"
-      src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_preview_1.jpg"
-    ></image>
+    <image class="thumb" :src="goodsList.mainPictures[0]"></image>
     <view class="wrap">
       <view class="price">
         <view class="discount">
           <text class="symbol">¥</text>
-          <text class="number">129</text>
+          <text class="number">{{ goodsList.oldPrice }}</text>
           <text class="decimal">.00</text>
         </view>
         <view class="original">
           <text class="symbol">¥</text>
-          <text class="number">199</text>
+          <text class="number">{{ goodsList.price }}</text>
           <text class="decimal">.00</text>
         </view>
       </view>
@@ -41,28 +58,34 @@ const goOrder = () => {
   </view>
 
   <view class="body">
-    <view class="specs">
-      <view class="label">颜色</view>
-      <view class="section">
-        <view class="item checked">白色</view>
-        <view class="item">黑色</view>
-        <view class="item">灰色</view>
-        <view class="item">卡其色</view>
+    <view class="specs" v-for="item in goodsList.specs">
+      <view class="label">{{ item.name }}</view>
+      <view
+        class="section"
+        v-for="(category, index) in item.values"
+        :key="category.name"
+      >
+        <view
+          class="item"
+          :class="{ checked: category.active }"
+          @tap="handleActive(category)"
+          >{{ category.name }}</view
+        >
       </view>
-      <view class="label">类型</view>
+      <!-- <view class="label">类型</view>
       <view class="section">
         <view class="item">红外体温计</view>
         <view class="item disabled">双模</view>
         <view class="item">灵敏</view>
         <view class="item">便携式</view>
-      </view>
+      </view> -->
     </view>
     <view class="number">
       <view class="label">数量</view>
       <view class="counter">
         <text class="text disabled">-</text>
-        <input type="text" class="input" value="1" />
-        <text class="text">+</text>
+        <input type="text" class="input" :value="price" />
+        <text class="text" @tap="increment">+</text>
       </view>
     </view>
   </view>
@@ -139,6 +162,7 @@ const goOrder = () => {
 
 .body .specs .section {
   overflow: hidden;
+  display: flex;
 }
 
 .body .specs .item {

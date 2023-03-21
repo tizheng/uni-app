@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-
+import piniaPersist from 'pinia-plugin-persist'
 const useAppStore = defineStore('app', () => {
   // 获取系统信息
   const systemInfo = uni.getSystemInfoSync()

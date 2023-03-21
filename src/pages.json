@@ -15,8 +15,9 @@
       "style": {
         "navigationStyle": "custom",
         "navigationBarTextStyle": "white",
-        "enablePullDownRefresh": false,
-        "backgroundColorTop": "#28bb9c"
+        "enablePullDownRefresh": true,
+        "backgroundColorTop": "#28bb9c",
+        "onReachBottomDistance": 160
       }
     },
     {

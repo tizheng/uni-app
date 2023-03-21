@@ -3,14 +3,12 @@ import type {
   getCategoryList,
   getHotListRES,
   getNewListRES,
-  guessLikeListReES,
   guessLikeList,
-  guessLikeListEL,
 } from '@/types/home'
 import http from '@/utils/http'
 export const getBanner = (distributionSite: number = 1) => {
   return http<getBannerList>({
-    url: 'https://pcapi-xiaotuxian-front.itheima.net/home/banner',
+    url: 'home/banner',
     method: 'GET',
     data: {
       distributionSite,
@@ -19,19 +17,19 @@ export const getBanner = (distributionSite: number = 1) => {
 }
 export const getCategory = () => {
   return http<getCategoryList>({
-    url: 'https://pcapi-xiaotuxian-front.itheima.net/home/category/mutli',
+    url: 'home/category/mutli',
     method: 'GET',
   })
 }
 export const getHotMutlis = () => {
   return http<getHotListRES>({
-    url: 'https://pcapi-xiaotuxian-front.itheima.net/home/hot/mutli',
+    url: 'home/hot/mutli',
     method: 'GET',
   })
 }
 export const getNewList = (limit: number = 4) => {
   return http<getNewListRES>({
-    url: 'https://pcapi-xiaotuxian-front.itheima.net/home/new',
+    url: 'home/new',
     method: 'GET',
     data: {
       limit,
@@ -39,8 +37,8 @@ export const getNewList = (limit: number = 4) => {
   })
 }
 export const getGuessLike = (page: number = 1, pageSize: number = 10) => {
-  return http<guessLikeListEL>({
-    url: 'https://pcapi-xiaotuxian-front.itheima.net/home/goods/guessLike',
+  return http<guessLikeList>({
+    url: '/goods/guessLike',
     method: 'GET',
     data: {
       page,

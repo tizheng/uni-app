@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { toRef, getCurrentInstance } from 'vue'
-import { onReady } from '@dcloudio/uni-app'
+import { toRef, getCurrentInstance, computed } from 'vue'
+import { onReady, onLoad } from '@dcloudio/uni-app'
 import useAppStore from '@/store'
+import { useUserStore } from '@/store/member'
+import { storeToRefs } from 'pinia'
 
 const appStore = useAppStore()
 const safeArea = toRef(appStore, 'safeArea')
@@ -32,7 +34,7 @@ onReady(() => {
       timeRange: 500,
       startScrollOffset: 0,
       endScrollOffset: 85,
-    },
+    }
   )
 
   pageInstance.ctx.$scope.animate(
@@ -44,7 +46,7 @@ onReady(() => {
       timeRange: 500,
       startScrollOffset: 0,
       endScrollOffset: 85,
-    },
+    }
   )
 
   pageInstance.ctx.$scope.animate(
@@ -56,8 +58,32 @@ onReady(() => {
       timeRange: 500,
       startScrollOffset: 85,
       endScrollOffset: 100,
-    },
+    }
   )
+})
+const member = useUserStore()
+const { profile, isLogin } = storeToRefs(member)
+//定义获取头像计算属性
+const avatar = computed(() => {
+  return profile.value.avatar
+})
+//定义获取用户名计算属性
+const nickname = computed(() => {
+  return profile.value.nickname ? profile.value.nickname : '未登录'
+})
+const go2Profile = () => {
+  if (isLogin.value) {
+    uni.navigateTo({
+      url: '/pages/my/profile',
+    })
+  } else {
+    uni.navigateTo({
+      url: '/pages/my/login',
+    })
+  }
+}
+onLoad(() => {
+  // console.log(member)
 })
 </script>
 
@@ -66,17 +92,16 @@ onReady(() => {
     <view class="viewport" :style="{ paddingTop: safeArea!.top + 40 + 'px' }">
       <!-- 个人资料 -->
       <view class="profile">
-        <view class="overview">
-          <image
-            class="avatar"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/avatar_3.jpg"
-          ></image>
+        <view class="overview" @tap="go2Profile">
+          <image class="avatar" :src="avatar"></image>
           <view class="meta">
-            <view class="nickname">未登录</view>
+            <view class="nickname">{{ nickname }}</view>
             <view class="extra">
-              <text class="tips">点击登录账号</text>
-              <!-- <text class="update">更新头像昵称</text>
-            <text class="relogin">切换账号</text> -->
+              <text v-if="!isLogin" class="tips">点击登录账号</text>
+              <template v-else>
+                <text class="update">更新头像昵称</text>
+                <text class="relogin">切换账号</text>
+              </template>
             </view>
           </view>
         </view>

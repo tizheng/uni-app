@@ -1,17 +1,15 @@
 import { createSSRApp } from 'vue'
 import App from './App.vue'
-
 import { createPinia } from 'pinia'
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 
 export function createApp() {
   const app = createSSRApp(App)
-
-  app.use(createPinia())
+  const pinia = createPinia()
+  pinia.use(piniaPluginPersistedstate)
+  app.use(pinia)
 
   return {
-    app
+    app,
   }
 }
-
-// 任务：拿到模板代码，找一个干净一点的地方，然后在 vscode 里面打开，再编译成 微信端的代码，用开发者工具打开
-// 再简单浏览一下已经写好的模板

@@ -4,12 +4,13 @@ import useAppStore from '@/store/index'
 import carousel from '@/components/carousel/index.vue'
 import guess from '@/components/guess/index.vue'
 import entries from './components/entries/index.vue'
+import homeSketch from '@/components/home-sketch/index.vue'
 import type {
   getBannerList,
   getCategoryList,
   getHotListRES,
   getNewListRES,
-  guessLikeListEL,
+  guessLikeListReES,
 } from '@/types/home'
 import { ref } from 'vue'
 import {
@@ -30,12 +31,16 @@ let bannerData = ref<getBannerList>([])
 let categoryData = ref<getCategoryList>([])
 let getHotMutliList = ref<getHotListRES>([])
 let getNewListEls = ref<getNewListRES>([])
-const guessLikeRes = ref<guessLikeListEL>()
+const guessLikeRes = ref<guessLikeListReES>([])
 
-const initTableList = async () => {
-  const res = await getBanner()
-  bannerData.value = res.result
-}
+const page = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+const isShow = ref(false)
+// let flag = ref<any>(false)
+const triggered = ref(false)
+let freshing = ref(false)
+
 const initGetBannerList = async () => {
   const res = await getBanner()
   bannerData.value = res.result
@@ -53,15 +58,22 @@ const initNewList = async () => {
   getNewListEls.value = res.result
 }
 const initGetGuessList = async () => {
-  const res = await getGuessLike()
-  guessLikeRes.value = res.result
+  const res = await getGuessLike(page.value, pageSize.value)
+  guessLikeRes.value = res.result.items
+  total.value = res.result.pages
 }
-onLoad(() => {
-  initGetBannerList()
-  initGetCategory()
-  initGetHotList()
-  initNewList()
-  initGetGuessList()
+onLoad(async () => {
+  isShow.value = true
+  uni.showLoading({ title: 'waiting' })
+  await Promise.all([
+    initGetBannerList(),
+    initGetCategory(),
+    initGetHotList(),
+    initNewList(),
+    initGetGuessList(),
+  ])
+  uni.hideLoading()
+  isShow.value = false
 })
 // 跳转到搜索页面
 const goSearch = async () => {
@@ -77,156 +89,184 @@ const scanCode = () => {
 const nextVersion = () => {
   uni.showToast({ title: '等待下一个版本哦~', icon: 'none' })
 }
+
+const handleScrolltolower = async () => {
+  if (page.value >= total.value) {
+    hasMore = false
+    return false
+  } else {
+    page.value++
+    const res = await getGuessLike(page.value, pageSize.value)
+    guessLikeRes.value = [...guessLikeRes.value, ...res.result.items]
+  }
+}
+const handleRefresherrefresh = async () => {
+  // if (freshing.value) return
+  // triggered.value = true
+  // freshing.value = true
+  // setTimeout(function () {
+  //   triggered.value = false
+  //   freshing.value = false
+  // }, 5000)
+}
 </script>
 
 <template>
-  <!-- 导航条 -->
-  <view class="navbar" :style="{ paddingTop: safeArea?.top + 'px' }">
-    <!-- 文字logo -->
-    <view class="logo">
-      <image
-        src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/images/logo.png"
-      ></image>
-      <text>新鲜 · 亲民 · 快捷</text>
-    </view>
-    <!-- 搜索条 -->
-    <view class="search" @tap="goSearch">
-      <text class="icon-search">搜索商品</text>
-      <text class="icon-scan" @tap="scanCode"></text>
-    </view>
-  </view>
-  <scroll-view
-    class="viewport"
-    scroll-y
-    refresher-enabled
-    enable-back-to-top
-    enhanced
-    refresher-background="#f7f7f8"
-    :show-scrollbar="false"
-  >
-    <!-- 焦点图 -->
-    <carousel style="height: 280rpx" :source="bannerData"></carousel>
-    <!-- 前台类目 -->
-    <entries :source="categoryData"></entries>
-    <!-- 推荐专区 -->
-    <view class="panel recommend">
-      <view class="item" v-for="item in getHotMutliList">
-        <view class="title"
-          >{{ item?.title }}<text>{{ item?.alt }}</text></view
-        >
-        <navigator
-          hover-class="none"
-          url="/pages/recommend/index?type=1"
-          class="cards"
-        >
-          <image mode="aspectFit" :src="item.pictures[0]"></image>
-          <image mode="aspectFit" :src="item.pictures[1]"></image>
-        </navigator>
+  <homeSketch v-if="isShow" />
+  <template v-else>
+    <!-- 导航条 -->
+    <view class="navbar" :style="{ paddingTop: safeArea?.top + 'px' }">
+      <!-- 文字logo -->
+      <view class="logo">
+        <image
+          src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/images/logo.png"
+        ></image>
+        <text>新鲜 · 亲民 · 快捷</text>
+      </view>
+      <!-- 搜索条 -->
+      <view class="search" @tap="goSearch">
+        <text class="icon-search">搜索商品</text>
+        <text class="icon-scan" @tap="scanCode"></text>
       </view>
     </view>
-    <!-- 新鲜好物 -->
-    <view class="panel fresh">
-      <view class="title">
-        新鲜好物
-        <navigator
-          hover-class="none"
-          class="more"
-          url="/pages/recommend/index?type=5"
-          >更多</navigator
-        >
+    <scroll-view
+      class="viewport"
+      scroll-y
+      refresher-enabled
+      enable-back-to-
+      enhanced
+      :refresher-triggered="triggered"
+      refresher-background="#f7f7f8"
+      :show-scrollbar="false"
+      @scrolltolower="handleScrolltolower"
+      @refresherrefresh="handleRefresherrefresh"
+    >
+      <!-- 焦点图 -->
+      <carousel style="height: 280rpx" :source="bannerData"></carousel>
+      <!-- 前台类目 -->
+      <entries :source="categoryData"></entries>
+      <!-- 推荐专区 -->
+      <view class="panel recommend">
+        <view class="item" v-for="item in getHotMutliList">
+          <view class="title"
+            >{{ item?.title }}<text>{{ item?.alt }}</text></view
+          >
+          <navigator
+            hover-class="none"
+            :url="`/pages/recommend/index?type=${item?.type}`"
+            class="cards"
+          >
+            <image mode="aspectFit" :src="item.pictures[0]"></image>
+            <image mode="aspectFit" :src="item.pictures[1]"></image>
+          </navigator>
+        </view>
       </view>
-      <view class="cards">
-        <navigator
-          hover-class="none"
-          url="/pages/goods/index"
-          v-for="item in getNewListEls"
-        >
-          <image mode="aspectFit" :src="item.picture"></image>
-          <view class="name">{{ item.name }}</view>
-          <view class="price">
-            <text class="small">¥</text>{{ item.price }}
-          </view>
-        </navigator>
+      <!-- 新鲜好物 -->
+      <view class="panel fresh">
+        <view class="title">
+          新鲜好物
+          <navigator
+            hover-class="none"
+            class="more"
+            url="/pages/recommend/index?type=5"
+            >更多</navigator
+          >
+        </view>
+        <view class="cards">
+          <navigator
+            hover-class="none"
+            url="/pages/goods/index"
+            v-for="item in getNewListEls"
+          >
+            <image mode="aspectFit" :src="item.picture"></image>
+            <view class="name">{{ item.name }}</view>
+            <view class="price">
+              <text class="small">¥</text>{{ item.price }}
+            </view>
+          </navigator>
+        </view>
       </view>
-    </view>
-    <!-- 热门品牌 -->
-    <view class="panel brands">
-      <view class="title">
-        热门品牌
-        <navigator hover-class="none" class="more" url="/pages/list/index"
-          >更多</navigator
-        >
+      <!-- 热门品牌 -->
+      <view class="panel brands">
+        <view class="title">
+          热门品牌
+          <navigator hover-class="none" class="more" url="/pages/list/index"
+            >更多</navigator
+          >
+        </view>
+        <view class="cards">
+          <navigator hover-class="none" url="/pages/goods/index">
+            <image
+              mode="aspectFit"
+              src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/brand_logo_1.jpg"
+            ></image>
+            <view class="name">小米</view>
+            <view class="price">99元起</view>
+          </navigator>
+          <navigator hover-class="none" url="/pages/goods/index">
+            <image
+              mode="aspectFit"
+              src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/brand_logo_2.jpg"
+            ></image>
+            <view class="name">TCL</view>
+            <view class="price">199起</view>
+          </navigator>
+          <navigator hover-class="none" url="/pages/goods/index">
+            <image
+              mode="aspectFit"
+              src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/brand_logo_3.jpg"
+            ></image>
+            <view class="name">饭小宝</view>
+            <view class="price">9.9起</view>
+          </navigator>
+          <navigator hover-class="none" url="/pages/goods/index">
+            <image
+              mode="aspectFit"
+              src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/brand_logo_4.jpg"
+            ></image>
+            <view class="name">鳄鱼</view>
+            <view class="price">299起</view>
+          </navigator>
+        </view>
       </view>
-      <view class="cards">
-        <navigator hover-class="none" url="/pages/goods/index">
-          <image
-            mode="aspectFit"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/brand_logo_1.jpg"
-          ></image>
-          <view class="name">小米</view>
-          <view class="price">99元起</view>
-        </navigator>
-        <navigator hover-class="none" url="/pages/goods/index">
-          <image
-            mode="aspectFit"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/brand_logo_2.jpg"
-          ></image>
-          <view class="name">TCL</view>
-          <view class="price">199起</view>
-        </navigator>
-        <navigator hover-class="none" url="/pages/goods/index">
-          <image
-            mode="aspectFit"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/brand_logo_3.jpg"
-          ></image>
-          <view class="name">饭小宝</view>
-          <view class="price">9.9起</view>
-        </navigator>
-        <navigator hover-class="none" url="/pages/goods/index">
-          <image
-            mode="aspectFit"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/brand_logo_4.jpg"
-          ></image>
-          <view class="name">鳄鱼</view>
-          <view class="price">299起</view>
-        </navigator>
+      <!-- 专题 -->
+      <view class="panel topic">
+        <view class="title">
+          专题
+          <navigator hover-class="none" class="more" url="">更多</navigator>
+        </view>
+        <view class="cards">
+          <navigator hover-class="none" url="">
+            <image
+              src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/topic_1.jpg"
+            ></image>
+            <view class="name">忙里忙外，回家吃饭忙里忙外，回家吃饭</view>
+            <view class="price"> <text>19.9元</text>起 </view>
+            <view class="extra">
+              <text space="ensp" class="icon-heart">1220</text>
+              <text space="ensp" class="icon-preview">1000</text>
+            </view>
+          </navigator>
+          <navigator hover-class="none" url="">
+            <image
+              src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/topic_2.jpg"
+            ></image>
+            <view class="name">忙里忙外，回家吃饭</view>
+            <view class="price"> <text>19.9元</text>起 </view>
+            <view class="extra">
+              <text space="ensp" class="icon-heart">1220</text>
+              <text space="ensp" class="icon-preview">1000</text>
+            </view>
+          </navigator>
+        </view>
       </view>
-    </view>
-    <!-- 专题 -->
-    <view class="panel topic">
-      <view class="title">
-        专题
-        <navigator hover-class="none" class="more" url="">更多</navigator>
-      </view>
-      <view class="cards">
-        <navigator hover-class="none" url="">
-          <image
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/topic_1.jpg"
-          ></image>
-          <view class="name">忙里忙外，回家吃饭忙里忙外，回家吃饭</view>
-          <view class="price"> <text>19.9元</text>起 </view>
-          <view class="extra">
-            <text space="ensp" class="icon-heart">1220</text>
-            <text space="ensp" class="icon-preview">1000</text>
-          </view>
-        </navigator>
-        <navigator hover-class="none" url="">
-          <image
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/topic_2.jpg"
-          ></image>
-          <view class="name">忙里忙外，回家吃饭</view>
-          <view class="price"> <text>19.9元</text>起 </view>
-          <view class="extra">
-            <text space="ensp" class="icon-heart">1220</text>
-            <text space="ensp" class="icon-preview">1000</text>
-          </view>
-        </navigator>
-      </view>
-    </view>
-    <!-- 猜你喜欢 -->
-    <guess :source="guessLikeRes"></guess>
-    <view class="loading" v-if="hasMore">正在加载...</view>
-  </scroll-view>
+      <!-- 猜你喜欢 -->
+      <guess :source="guessLikeRes"></guess>
+      <view class="loading" v-if="hasMore">{{
+        hasMore ? '没有更多了' : '正在加载'
+      }}</view>
+    </scroll-view>
+  </template>
 </template>
 
 <style>

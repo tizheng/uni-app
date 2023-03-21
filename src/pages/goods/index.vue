@@ -3,12 +3,18 @@ import clause from './components/clause/index.vue'
 import helps from './components/helps/index.vue'
 import shipment from './components/shipment/index.vue'
 import sku from './components/sku/index.vue'
-import { toRef, ref } from 'vue'
+import { toRef, ref, computed } from 'vue'
 import useAppStore from '@/store'
-
+import { onLoad } from '@dcloudio/uni-app'
+import { getRecommendList } from '@/service/goods'
+import { GoodsResult } from '@/types/goods'
+import { GoodsSku } from '@/types/spcGoods'
+import goodsSketch from '@/components/goods-sketch/index.vue'
+import goodsSkuPopup from '@/components/vk-data-goods-sku-popup/vk-data-goods-sku-popup.vue'
+import { addCarts, getCarts } from '@/service/cart'
+import type { cartListResult } from '@/types/cart'
 const appStore = useAppStore()
 const safeArea = toRef(appStore, 'safeArea')
-
 // 返回上一页
 const goBack = () => {
   uni.navigateBack({})
@@ -37,6 +43,96 @@ const showHalfDialog = (layerName: Layer) => {
 const hideHalfDialog = () => {
   popup.value!.close()
 }
+const goodsInfo = ref({} as GoodsSku)
+const goodsList = ref<GoodsResult>({} as GoodsResult)
+const initGoodsList = async (id: string) => {
+  const res = await getRecommendList(goodsProps.id)
+  goodsList.value = res.result
+
+  goodsInfo.value = {
+    _id: goodsList.value.id,
+    name: goodsList.value.name,
+    goods_thumb: goodsList.value.mainPictures[0],
+    sku_list: goodsList.value.skus.map((item) => {
+      return {
+        _id: item.id,
+        goods_id: goodsList.value.id,
+        goods_name: goodsList.value.name,
+        image: goodsList.value.mainPictures[0],
+        price: Number(item.price),
+        sku_name_arr: item.specs.map((spec) => spec.valueName),
+        stock: item.inventory,
+      }
+    }),
+    spec_list: goodsList.value.specs.map((spec) => {
+      return {
+        list: spec.values.map((item) => {
+          return {
+            name: item.name,
+          }
+        }),
+        name: spec.name,
+      }
+    }),
+  }
+}
+const goodsProps = defineProps<{
+  id: string
+}>()
+const currentIndex = ref(0)
+const swiperChanged = (e: WechatMiniprogram.SwiperChange) => {
+  currentIndex.value = e.detail.current
+}
+const back = () => {
+  const currentPages = getCurrentPages()
+  //返回上一级
+  if (currentPages.length > 1) {
+    uni.navigateBack({})
+  } else {
+    //返回首页
+    uni.switchTab({
+      url: '/pages/index/index',
+    })
+  }
+  if (currentPages.length === 1) {
+  }
+}
+
+const handleTap = (item: string) => {
+  //预览图片
+  uni.previewImage({
+    current: item, // 当前显示图片的http链接
+    urls: goodsList.value.mainPictures, // 需要预览的图片http链接列表
+  })
+}
+const skuRef = ref()
+const selectArrText = computed(() => {
+  if (skuRef.value) {
+    return skuRef.value?.selectArr.join('')
+  }
+})
+const skuKey = ref(false)
+type skuModeType = {
+  1: number // sku
+  2: number // car
+  3: number // now
+}
+const skuMode = ref(1)
+const showDialog = (number: number) => {
+  skuMode.value = number
+  skuKey.value = true
+}
+const addCart = async (ev: any) => {
+  await addCarts(ev._id, ev.buy_num)
+  uni.showToast({ title: '添加到购物车成功' })
+  skuKey.value = false
+}
+
+onLoad(({ id }) => {
+  if (id) {
+    initGoodsList(id)
+  }
+})
 </script>
 
 <template>
@@ -49,355 +145,207 @@ const hideHalfDialog = () => {
     class="viewport"
     id="scrollView"
   >
+    <uni-icons
+      type="back"
+      size="20"
+      color="#fff"
+      class="back"
+      @tap="back"
+    ></uni-icons>
     <!-- 商品信息 -->
-    <view class="goods anchor" data-anchor-index="0">
-      <view class="preview">
-        <swiper circular>
-          <swiper-item>
-            <image
-              src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_preview_1.jpg"
-            />
-          </swiper-item>
-          <swiper-item>
-            <image
-              src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_preview_2.jpg"
-            />
-          </swiper-item>
-          <swiper-item>
-            <image
-              src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_preview_3.jpg"
-            />
-          </swiper-item>
-          <swiper-item>
-            <image
-              src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_preview_4.jpg"
-            />
-          </swiper-item>
-          <swiper-item>
-            <image
-              src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_preview_5.jpg"
-            />
-          </swiper-item>
-          <swiper-item>
-            <image
-              src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_preview_6.jpg"
-            />
-          </swiper-item>
-        </swiper>
-        <view class="indicator">
-          <text class="current">1</text>
-          <text class="split">/</text>
-          <text class="total">6</text>
-        </view>
-      </view>
-
-      <view class="meta">
-        <view class="price">
-          <text class="symbol">¥</text>
-          <text class="number">129</text>
-          <text class="decimal">.00</text>
-        </view>
-        <view class="brand">
-          <image
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/brand_logo_9.jpg"
-          />
-        </view>
-        <view class="name ellipsis">
-          康尔贝 非接触式红外体温仪 领券立减30元 婴儿级材质 测温更安全康尔贝
-          非接触式红外体温仪 领券立减30元 婴儿级材质 测温更安全康尔贝
-          非接触式红外体温仪 领券立减30元 婴儿级材质 测温更安全康尔贝
-        </view>
-        <view class="remarks"> 一秒测温 一键操作 双探头精准测温 </view>
-      </view>
-      <view class="related">
-        <view @tap="showHalfDialog('sku')" class="item arrow">
-          <text class="label">选择</text>
-          <text class="text ellipsis">白色 红外体温计 1件</text>
-        </view>
-        <view @tap="showHalfDialog('shipment')" class="item arrow">
-          <text class="label">送至</text>
-          <text class="text ellipsis">北京市顺义区京顺路9号黑马程序员</text>
-        </view>
-        <view @tap="showHalfDialog('clause')" class="item arrow">
-          <text class="label">服务</text>
-          <text class="text ellipsis">无忧退 快速退款 免费包邮</text>
-        </view>
-      </view>
-    </view>
-    <!-- 商品评价 -->
-    <view class="comments panel anchor" data-anchor-index="1">
-      <view class="title arrow">
-        <text>评价</text>
-        <navigator url="/pages/comments/index" hover-class="none" class="more"
-          >好评度 70%</navigator
-        >
-      </view>
-      <view class="comment">
-        <view class="caption">
-          <view class="user">
-            <image
-              class="avatar"
-              src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/avatar_2.jpg"
-            />
-            <text>白月初</text>
-          </view>
-          <view class="rating">
-            <view class="rank" style="width: 80%"></view>
+    <goodsSketch v-if="!goodsList.id"></goodsSketch>
+    <template v-else>
+      <view class="goods anchor" data-anchor-index="0">
+        <view class="preview">
+          <swiper circular @change="swiperChanged">
+            <swiper-item v-for="(item, index) in goodsList.mainPictures">
+              <image :src="item" @tap="handleTap(item)" />
+            </swiper-item>
+          </swiper>
+          <view class="indicator">
+            <text class="current">{{ currentIndex + 1 }}</text>
+            <text class="split">/</text>
+            <text class="total">5</text>
           </view>
         </view>
-        <view class="content">
-          <view class="text"> 质量不错，灵敏度高，结构巧妙，款式也好看 </view>
-          <view class="pictures">
-            <view class="picture">
-              <image
-                src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/comment_1.jpg"
-              />
-            </view>
-            <view class="picture">
-              <image
-                src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/comment_2.jpg"
-              />
-            </view>
-            <view class="picture">
-              <image
-                src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/comment_2.jpg"
-              />
-            </view>
+        <view class="meta">
+          <view class="price">
+            <text class="symbol">¥</text>
+            <text class="number">{{ goodsList.price }}</text>
+            <text class="decimal">.00</text>
           </view>
-          <view class="extra">
-            <text class="date">购买时间: 2020-11-11</text>
-            <text class="type">黑色 公开版 128G</text>
+          <view class="brand">
+            <image :src="goodsList.brand.logo" />
           </view>
+          <view class="name ellipsis">
+            {{ goodsList.desc }}
+          </view>
+          <view class="remarks"> {{ goodsList.name }}</view>
         </view>
-      </view>
-      <view class="comment">
-        <view class="caption">
-          <view class="user">
-            <image
-              class="avatar"
-              src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/avatar_3.jpg"
-            />
-            <text>白月初</text>
+        <view class="related">
+          <view @tap="showDialog(1)" class="item arrow">
+            <text class="label">选择</text>
+            <text class="text ellipsis">{{
+              selectArrText || '请选择规格'
+            }}</text>
           </view>
-          <view class="rating">
-            <view class="rank" style="width: 60%"></view>
-          </view>
-        </view>
-        <view class="content">
-          <view class="text"> 质量不错，灵敏度高，结构巧妙，款式也好看 </view>
-          <view class="pictures">
-            <view class="picture">
-              <image
-                src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/comment_1.jpg"
-              />
-            </view>
-            <view class="picture">
-              <image
-                src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/comment_2.jpg"
-              />
-            </view>
-            <view class="picture">
-              <image
-                src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/comment_2.jpg"
-              />
-            </view>
-            <view class="picture">
-              <image
-                src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/comment_1.jpg"
-              />
-            </view>
-          </view>
-          <view class="extra">
-            <text class="date">购买时间: 2020-11-11</text>
-            <text class="type">黑色 公开版 128G</text>
-          </view>
-        </view>
-      </view>
-    </view>
-    <!-- 商品详情 -->
-    <view class="detail panel anchor" data-anchor-index="2">
-      <view class="title">
-        <text>详情</text>
-      </view>
-      <view class="content">
-        <view class="properties">
-          <view class="item">
-            <text class="label">材质</text>
-            <text class="value">玻璃</text>
-          </view>
-          <view class="item">
-            <text class="label">适应酒种</text>
-            <text class="value">红葡萄酒</text>
-          </view>
-          <view class="item">
-            <text class="label">材质说明</text>
-            <text class="value"
-              >机身：不锈钢外壳-SUS202；按键：ABS；顶盖+下壳：透明PC；底盖：ABS开瓶刀：SUS304不锈钢</text
+          <view @tap="showHalfDialog('shipment')" class="item arrow">
+            <text class="label">送至</text>
+            <view v-for="item in goodsList.userAddresses">
+              <text class="text ellipsis" v-if="item.isDefault">{{
+                item.fullLocation
+              }}</text></view
             >
           </view>
-          <view class="item">
-            <text class="label">参数设置</text>
-            <text class="value"
-              >额定电压：3.7V额定频率：50/60Hz额定功率：10W净重：314g</text
-            >
+          <view @tap="showHalfDialog('clause')" class="item arrow">
+            <text class="label">服务</text>
+            <text class="text ellipsis">无忧退 快速退款 免费包邮</text>
           </view>
         </view>
-
-        <image
-          mode="widthFix"
-          src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_detail_1.jpg"
-        ></image>
-        <image
-          mode="widthFix"
-          src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_detail_2.jpg"
-        ></image>
-        <image
-          mode="widthFix"
-          src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_detail_3.jpg"
-        ></image>
-        <image
-          mode="widthFix"
-          src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_detail_4.jpg"
-        ></image>
-        <image
-          mode="widthFix"
-          src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_detail_5.jpg"
-        ></image>
-        <image
-          mode="widthFix"
-          src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_detail_6.jpg"
-        ></image>
-        <image
-          mode="widthFix"
-          src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_detail_7.jpg"
-        ></image>
-        <image
-          mode="widthFix"
-          src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_detail_8.jpg"
-        ></image>
-        <image
-          mode="widthFix"
-          src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_detail_9.jpg"
-        ></image>
       </view>
-    </view>
-    <!-- 常见问题 -->
-    <view class="help arrow" @tap="showHalfDialog('helps')">
-      <text class="icon-help"></text>
-      <navigator hover-class="none">常见问题</navigator>
-    </view>
-    <!-- 推荐 -->
-    <view class="recommend panel anchor" data-anchor-index="3">
-      <view class="title">
-        <text>推荐</text>
-      </view>
-      <view class="content">
-        <navigator url="/pages/goods/index" hover-class="none">
-          <image
-            class="image"
-            mode="aspectFit"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_big_1.jpg"
-          ></image>
-          <view class="name ellipsis"
-            >肖勒超薄防水手表精钢材质放水水功能肖勒超薄防水手表精钢材质放水水功能肖勒超薄防水手表精钢材质放水水功能</view
+      <!-- 商品评价 -->
+      <view class="comments panel anchor" data-anchor-index="1">
+        <view class="title arrow">
+          <text>评价</text>
+          <navigator url="/pages/comments/index" hover-class="none" class="more"
+            >好评度 70%</navigator
           >
-          <view class="price">
-            <text class="symbol">¥</text>
-            <text class="number">899</text>
-            <text class="decimal">.00</text>
+        </view>
+        <view class="comment">
+          <view class="caption">
+            <view class="user">
+              <image
+                class="avatar"
+                src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/avatar_2.jpg"
+              />
+              <text>白月初</text>
+            </view>
+            <view class="rating">
+              <view class="rank" style="width: 80%"></view>
+            </view>
           </view>
-        </navigator>
-        <navigator url="/pages/goods/index" hover-class="none">
-          <image
-            class="image"
-            mode="aspectFit"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_big_2.jpg"
-          ></image>
-          <view class="name ellipsis">肖勒超薄防水手表精钢材质放水水功能</view>
-          <view class="price">
-            <text class="symbol">¥</text>
-            <text class="number">899</text>
-            <text class="decimal">.00</text>
+          <view class="content">
+            <view class="text"> 质量不错，灵敏度高，结构巧妙，款式也好看 </view>
+            <view class="pictures">
+              <view class="picture">
+                <image
+                  src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/comment_1.jpg"
+                />
+              </view>
+              <view class="picture">
+                <image
+                  src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/comment_2.jpg"
+                />
+              </view>
+              <view class="picture">
+                <image
+                  src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/comment_2.jpg"
+                />
+              </view>
+            </view>
+            <view class="extra">
+              <text class="date">购买时间: 2020-11-11</text>
+              <text class="type">黑色 公开版 128G</text>
+            </view>
           </view>
-        </navigator>
-        <navigator url="/pages/goods/index" hover-class="none">
-          <image
-            class="image"
-            mode="aspectFit"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_big_3.jpg"
-          ></image>
-          <view class="name ellipsis">肖勒超薄防水手表精钢材质放水水功能</view>
-          <view class="price">
-            <text class="symbol">¥</text>
-            <text class="number">899</text>
-            <text class="decimal">.00</text>
+        </view>
+        <view class="comment">
+          <view class="caption">
+            <view class="user">
+              <image
+                class="avatar"
+                src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/avatar_3.jpg"
+              />
+              <text>白月初</text>
+            </view>
+            <view class="rating">
+              <view class="rank" style="width: 60%"></view>
+            </view>
           </view>
-        </navigator>
-        <navigator url="/pages/goods/index" hover-class="none">
-          <image
-            class="image"
-            mode="aspectFit"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_big_4.jpg"
-          ></image>
-          <view class="name ellipsis">肖勒超薄防水手表精钢材质放水水功能</view>
-          <view class="price">
-            <text class="symbol">¥</text>
-            <text class="number">899</text>
-            <text class="decimal">.00</text>
+          <view class="content">
+            <view class="text"> 质量不错，灵敏度高，结构巧妙，款式也好看 </view>
+            <view class="pictures">
+              <view class="picture">
+                <image
+                  src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/comment_1.jpg"
+                />
+              </view>
+              <view class="picture">
+                <image
+                  src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/comment_2.jpg"
+                />
+              </view>
+              <view class="picture">
+                <image
+                  src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/comment_2.jpg"
+                />
+              </view>
+              <view class="picture">
+                <image
+                  src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/comment_1.jpg"
+                />
+              </view>
+            </view>
+            <view class="extra">
+              <text class="date">购买时间: 2020-11-11</text>
+              <text class="type">黑色 公开版 128G</text>
+            </view>
           </view>
-        </navigator>
-        <navigator url="/pages/goods/index" hover-class="none">
-          <image
-            class="image"
-            mode="aspectFit"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_big_5.jpg"
-          ></image>
-          <view class="name ellipsis">肖勒超薄防水手表精钢材质放水水功能</view>
-          <view class="price">
-            <text class="symbol">¥</text>
-            <text class="number">899</text>
-            <text class="decimal">.00</text>
-          </view>
-        </navigator>
-        <navigator url="/pages/goods/index" hover-class="none">
-          <image
-            class="image"
-            mode="aspectFit"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_big_6.jpg"
-          ></image>
-          <view class="name ellipsis">肖勒超薄防水手表精钢材质放水水功能</view>
-          <view class="price">
-            <text class="small">¥</text>899<text class="small">.00</text>
-          </view>
-        </navigator>
-        <navigator url="/pages/goods/index" hover-class="none">
-          <image
-            class="image"
-            mode="aspectFit"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_big_7.jpg"
-          ></image>
-          <view class="name ellipsis">肖勒超薄防水手表精钢材质放水水功能</view>
-          <view class="price">
-            <text class="symbol">¥</text>
-            <text class="number">899</text>
-            <text class="decimal">.00</text>
-          </view>
-        </navigator>
-        <navigator url="/pages/goods/index" hover-class="none">
-          <image
-            class="image"
-            mode="aspectFit"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_big_3.jpg"
-          ></image>
-          <view class="name ellipsis">肖勒超薄防水手表精钢材质放水水功能</view>
-          <view class="price">
-            <text class="small">¥</text>899<text class="small">.00</text>
-          </view>
-        </navigator>
+        </view>
       </view>
-    </view>
+      <!-- 商品详情 -->
+      <view class="detail panel anchor" data-anchor-index="2">
+        <view class="title">
+          <text>详情</text>
+        </view>
+        <view class="content">
+          <view class="properties">
+            <!-- 商品详情属性 -->
+            <view
+              class="item"
+              v-for="item in goodsList.details?.properties"
+              :key="item.name"
+            >
+              <text class="label">{{ item.name }}</text>
+              <text class="value">{{ item.value }}</text>
+            </view>
+          </view>
+          <image
+            mode="widthFix"
+            v-for="(item, index) in goodsList.details?.pictures"
+            :key="index"
+            :src="item"
+          ></image>
+        </view>
+      </view>
+      <!-- 常见问题 -->
+      <view class="help arrow" @tap="showHalfDialog('helps')">
+        <text class="icon-help"></text>
+        <navigator hover-class="none">常见问题</navigator>
+      </view>
+      <!-- 推荐 -->
+      <view class="recommend panel anchor" data-anchor-index="3">
+        <view class="title">
+          <text>推荐</text>
+        </view>
+        <view class="content">
+          <navigator
+            :url="`/pages/goods/index/${item.id}`"
+            hover-class="none"
+            v-for="item in goodsList.similarProducts"
+          >
+            <image class="image" mode="aspectFit" :src="item.picture"></image>
+            <view class="name ellipsis">{{ item.name }}</view>
+            <view class="price">
+              <text class="symbol">¥</text>
+              <text class="number">{{ item.price }}</text>
+              <text class="decimal">.00</text>
+            </view>
+          </navigator>
+        </view>
+      </view>
+    </template>
   </scroll-view>
-
   <!-- 用户操作 -->
   <view class="toolbar">
     <view class="icons">
@@ -410,18 +358,10 @@ const hideHalfDialog = () => {
       </button>
     </view>
     <view class="buttons">
-      <view
-        @tap="showHalfDialog('sku')"
-        data-button-type="cart"
-        class="addcart"
-      >
+      <view @tap="showDialog(2)" data-button-type="cart" class="addcart">
         加入购物车
       </view>
-      <view
-        @tap="showHalfDialog('sku')"
-        data-button-type="payment"
-        class="payment"
-      >
+      <view @tap="showDialog(3)" data-button-type="payment" class="payment">
         立即购买
       </view>
     </view>
@@ -430,12 +370,22 @@ const hideHalfDialog = () => {
   <uni-popup type="bottom" ref="popup" background-color="#fff">
     <view class="popup-root">
       <text @tap="hideHalfDialog" class="close icon-close"></text>
-      <sku button-type="" v-if="layer === 'sku'"></sku>
-      <shipment v-if="layer === 'shipment'"></shipment>
+      <sku button-type="" v-if="layer === 'sku'" :goods-list="goodsList"></sku>
+      <shipment
+        :goods-list="goodsList.userAddresses"
+        v-if="layer === 'shipment'"
+      ></shipment>
       <clause v-if="layer === 'clause'"></clause>
       <helps v-if="layer === 'helps'"></helps>
     </view>
   </uni-popup>
+  <goodsSkuPopup
+    ref="skuRef"
+    v-model="skuKey"
+    :localdata="goodsInfo"
+    :mode="skuMode"
+    @add-cart="addCart"
+  />
 </template>
 
 <style>
@@ -985,5 +935,18 @@ page {
 .toolbar .icons text {
   display: block;
   font-size: 34rpx;
+}
+.back {
+  display: block;
+  width: 50rpx;
+  height: 50rpx;
+  background: rgba(0, 0, 0, 0.5);
+  position: absolute;
+  top: 50rpx;
+  left: 30rpx;
+  z-index: 10;
+  border-radius: 50%;
+  line-height: 50rpx;
+  text-align: center;
 }
 </style>

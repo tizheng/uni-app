@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { guessLikeListEL, guessLikeItem } from '@/types/home'
+import type { guessLikeItem } from '@/types/home'
 defineProps<{
-  source: guessLikeListEL[]
+  source: guessLikeItem[]
 }>()
 </script>
 
@@ -12,12 +12,12 @@ defineProps<{
   </view>
   <view class="guess">
     <navigator
-      url="/pages/goods/index"
-      class="navigator"
       v-for="item in source"
+      :url="`/pages/goods/index?id=${item.id}`"
+      class="navigator"
     >
-      <image class="image" mode="aspectFill" :src="item.items.picture"></image>
-      <view class="name">{{ item.items.name }}</view>
+      <image class="image" mode="aspectFill" :src="item.picture"></image>
+      <view class="name">{{ item.name }}</view>
       <view class="price">
         <text class="small">¥</text>{{ item.price
         }}<text class="small">.00</text>

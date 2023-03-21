@@ -24,11 +24,12 @@ const scrolled = (ev: WechatMiniprogram.ScrollViewScroll) => {
       @scroll="scrolled"
     >
       <view class="navs">
-        <view class="navs-item" v-for="item in source">
+        <view class="navs-item">
           <navigator
             class="navigator"
             hover-class="none"
             url="/pages/goods/list/index"
+            v-for="item in source"
           >
             <image class="icon" :src="item.icon"></image>
             <text class="text">{{ item.name }}</text>

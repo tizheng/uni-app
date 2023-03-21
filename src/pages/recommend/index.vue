@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { computed, reactive } from 'vue'
 
 import { onLoad } from '@dcloudio/uni-app'
-
+import { ref } from 'vue'
+import { PreferenceDataResult, SubType } from '@/types/recommends'
+//引入推荐api
+import { getRecommendList } from '@/service/recommend'
+import type { hotPreferenceType } from '@/service/recommend'
 interface metaType {
   title: string
   coverPath: string
@@ -38,164 +42,122 @@ const metaMap = reactive<{ [key: string]: metaType }>({
 
 let type = $ref('1')
 let meta = $ref(metaMap[type])
-
-onLoad(({ type }) => {
-  if (type) meta = metaMap[type]
+const hotPreferenceData = ref<PreferenceDataResult>({} as PreferenceDataResult)
+const page = ref<any>('1')
+const pageSize = ref(10)
+const pages = ref('')
+const recommendType = [
+  {
+    type: '1',
+    url: '/hot/preference', // 特惠推荐
+  },
+  {
+    type: '2',
+    url: '/hot/inVogue', // 爆款推荐
+  },
+  {
+    type: '3',
+    url: '/hot/oneStop', // 一站买全
+  },
+  {
+    type: '4',
+    url: '/hot/new', // 新鲜好物
+  },
+]
+const subTypes = ref<SubType[]>([])
+onLoad(async ({ type }) => {
+  if (!type) return
+  getRecommendListEl(type)
 })
+const getRecommendListEl = async (type: string) => {
+  const currentUrl = recommendType.find((item) => item.type === type)
+  const res = await getRecommendList(currentUrl!.url, {})
+  hotPreferenceData.value = res.result
+  subTypes.value = res.result.subTypes
+  pages.value = res.result.subTypes[activeEl.value].goodsItems.pages
+  uni.setNavigationBarTitle({
+    title: hotPreferenceData.value.title,
+  })
+}
+const activeEl = ref(0)
+const switchIndex = (index: number) => {
+  activeEl.value = index
+}
 
 // 动态更新导航栏标题
 uni.setNavigationBarTitle({
   title: meta.title,
 })
-</script>
 
+const flag = ref(true)
+
+const handleScrolltolower = async () => {
+  const currSubTypes = hotPreferenceData.value.subTypes[activeEl.value]
+  const total = currSubTypes.goodsItems.counts
+  if (page.value >= pages.value) {
+    flag.value = false
+    //uniapp消息提示
+    uni.showToast({
+      title: '没有数据了',
+      icon: 'none',
+    })
+    return false
+  } else {
+    const currentUrl = recommendType.find((item) => item.type === type)
+    const res = await getRecommendList(currentUrl!.url, {
+      page: page.value++,
+      pageSize: pageSize.value,
+      subType: currSubTypes.id,
+    })
+    hotPreferenceData.value.subTypes[activeEl.value].goodsItems.items.push(
+      ...res.result.subTypes[activeEl.value].goodsItems.items
+    )
+  }
+}
+</script>
 <template>
   <view class="viewport">
     <!-- 推荐封面图 -->
     <view class="cover">
-      <image :src="meta.coverPath"></image>
+      <image :src="hotPreferenceData.bannerPicture"></image>
     </view>
     <view class="tabs">
       <text
         class="text"
-        v-for="(item, index) in meta.tabs"
-        :key="item"
-        :class="{ active: index === 0 }"
-        >{{ item }}</text
-      >
+        v-for="(item, index) in hotPreferenceData.subTypes"
+        :key="item.id"
+        :class="{ active: index === activeEl }"
+        @tap="switchIndex(index)"
+        >{{ item.title }}
+      </text>
     </view>
-    <scroll-view scroll-y enhanced :show-scrollbar="false" class="scroll-view">
+    <scroll-view
+      scroll-y
+      enhanced
+      :show-scrollbar="false"
+      class="scroll-view"
+      v-for="(item, index) in subTypes"
+      :key="item.id"
+      v-show="activeEl === index"
+      @scrolltolower="handleScrolltolower"
+    >
       <view class="goods">
         <navigator
           hover-class="none"
-          url="/pages/goods/index"
+          :url="`/pages/goods/index?id=${item.id}`"
           class="navigator"
+          v-for="(i, ind) in item.goodsItems.items"
         >
-          <image
-            class="thumb"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_big_2.jpg"
-          ></image>
-          <view class="name ellipsis">肖勒超薄防水手表精钢材质 放水水功能</view>
+          <image class="thumb" :src="i.picture"></image>
+          <view class="name ellipsis">{{ i.name }}</view>
           <view class="price">
             <text class="symbol">¥</text>
-            <text class="number">199</text>
-            <text class="decimal">.00</text>
-          </view>
-        </navigator>
-        <navigator
-          hover-class="none"
-          url="/pages/goods/index"
-          class="navigator"
-        >
-          <image
-            class="thumb"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_big_6.jpg"
-          ></image>
-          <view class="name ellipsis">肖勒超薄防水手表精钢材质 放水水功能</view>
-          <view class="price">
-            <text class="symbol">¥</text>
-            <text class="number">199</text>
-            <text class="decimal">.00</text>
-          </view>
-        </navigator>
-        <navigator
-          hover-class="none"
-          url="/pages/goods/index"
-          class="navigator"
-        >
-          <image
-            class="thumb"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_big_4.jpg"
-          ></image>
-          <view class="name ellipsis">肖勒超薄防水手表精钢材质 放水水功能</view>
-          <view class="price">
-            <text class="symbol">¥</text>
-            <text class="number">199</text>
-            <text class="decimal">.00</text>
-          </view>
-        </navigator>
-        <navigator
-          hover-class="none"
-          url="/pages/goods/index"
-          class="navigator"
-        >
-          <image
-            class="thumb"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_big_5.jpg"
-          ></image>
-          <view class="name ellipsis">肖勒超薄防水手表精钢材质 放水水功能</view>
-          <view class="price">
-            <text class="symbol">¥</text>
-            <text class="number">199</text>
-            <text class="decimal">.00</text>
-          </view>
-        </navigator>
-        <navigator
-          hover-class="none"
-          url="/pages/goods/index"
-          class="navigator"
-        >
-          <image
-            class="thumb"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_big_2.jpg"
-          ></image>
-          <view class="name ellipsis">肖勒超薄防水手表精钢材质 放水水功能</view>
-          <view class="price">
-            <text class="symbol">¥</text>
-            <text class="number">199</text>
-            <text class="decimal">.00</text>
-          </view>
-        </navigator>
-        <navigator
-          hover-class="none"
-          url="/pages/goods/index"
-          class="navigator"
-        >
-          <image
-            class="thumb"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_big_6.jpg"
-          ></image>
-          <view class="name ellipsis">肖勒超薄防水手表精钢材质 放水水功能</view>
-          <view class="price">
-            <text class="symbol">¥</text>
-            <text class="number">199</text>
-            <text class="decimal">.00</text>
-          </view>
-        </navigator>
-        <navigator
-          hover-class="none"
-          url="/pages/goods/index"
-          class="navigator"
-        >
-          <image
-            class="thumb"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_big_7.jpg"
-          ></image>
-          <view class="name ellipsis">肖勒超薄防水手表精钢材质 放水水功能</view>
-          <view class="price">
-            <text class="symbol">¥</text>
-            <text class="number">199</text>
-            <text class="decimal">.00</text>
-          </view>
-        </navigator>
-        <navigator
-          hover-class="none"
-          url="/pages/goods/index"
-          class="navigator"
-        >
-          <image
-            class="thumb"
-            src="https://pcapi-xiaotuxian-front-devtest.itheima.net/miniapp/uploads/goods_big_3.jpg"
-          ></image>
-          <view class="name ellipsis">肖勒超薄防水手表精钢材质 放水水功能</view>
-          <view class="price">
-            <text class="symbol">¥</text>
-            <text class="number">199</text>
+            <text class="number">{{ i.price }}</text>
             <text class="decimal">.00</text>
           </view>
         </navigator>
       </view>
-      <view class="loading">正在加载...</view>
+      <view class="loading">{{ flag ? '加载中' : '没有数据了' }}</view>
     </scroll-view>
   </view>
 </template>

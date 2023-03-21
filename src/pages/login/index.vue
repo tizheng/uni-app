@@ -1,11 +1,48 @@
 <script setup lang="ts">
-const getPhoneNumber = () => {}
+import { login, testLogin } from '@/service/login'
+import { onLoad } from '@dcloudio/uni-app'
+import { ref } from 'vue'
+import { useUserStore } from '@/store/member'
+const userStore = useUserStore()
+let code: string = ''
+const onGetTestphonenumber = async (
+  ev: WechatMiniprogram.ButtonGetPhoneNumber
+) => {
+  // const { encryptedData, iv } = ev.detail
+  const res = await testLogin('18990909090')
+  uni.showToast({ title: '登陆成功', icon: 'none' })
+  userStore.setUser(res.result)
+  //定时器，跳转到我的页面
+  setTimeout(() => {
+    uni.switchTab({
+      url: '/pages/my/index',
+    })
+  }, 1500)
+}
+const onGetphonenumber = async (ev: WechatMiniprogram.ButtonGetPhoneNumber) => {
+  const { encryptedData, iv } = ev.detail
+  const res = await login({ code, encryptedData, iv })
+  uni.showToast({ title: '登陆成功', icon: 'none' })
+  userStore.setUser(res.result)
+  //定时器，跳转到我的页面
+  setTimeout(() => {
+    uni.switchTab({
+      url: '/pages/my/index',
+    })
+  }, 1500)
+}
 // 提示消息
 const nextVersion = () => {
   uni.showToast({ title: '等下一个版本哦', icon: 'none' })
 }
+onLoad(async () => {
+  const res = await wx.login()
+  if (res.errMsg === 'login:ok') {
+    code = res.code
+  }
+  console.log(res)
+})
 </script>
-
 <template>
   <view class="viewport">
     <view class="logo">
@@ -14,9 +51,21 @@ const nextVersion = () => {
       ></image>
     </view>
     <view class="login">
-      <button class="button phone">
-        <text class="icon icon-phone"></text>
-        手机号快捷登录
+      <button
+        class="button phone"
+        open-type="getPhoneNumber"
+        @getphonenumber="onGetTestphonenumber"
+      >
+        <!-- <button @getphonenumber="getPhoneNumber" open-type="getPhoneNumber"> -->
+        <text class="icon icon-phone">内测版手机号快捷登录</text>
+      </button>
+      <button
+        class="button phone"
+        open-type="getPhoneNumber"
+        @getphonenumber="onGetphonenumber"
+      >
+        <!-- <button @getphonenumber="getPhoneNumber" open-type="getPhoneNumber"> -->
+        <text class="icon icon-phone">用户版手机号快捷登录</text>
       </button>
       <view class="extra">
         <view class="caption">
@@ -26,7 +75,12 @@ const nextVersion = () => {
           <button>
             <text class="icon icon-weixin">微信</text>
           </button>
-          <button @getphonenumber="getPhoneNumber" open-type="getPhoneNumber">
+          <button
+            class="button phone"
+            open-type="getPhoneNumber"
+            @getphonenumber="onGetphonenumber"
+          >
+            <!-- <button @getphonenumber="getPhoneNumber" open-type="getPhoneNumber"> -->
             <text class="icon icon-phone">手机</text>
           </button>
           <button @tap="nextVersion">
@@ -76,7 +130,6 @@ page {
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 80rpx;
   font-size: 28rpx;
   border-radius: 72rpx;
   color: #fff;
@@ -126,7 +179,7 @@ page {
 .login .options button {
   line-height: 1;
   padding: 0;
-  margin: 0 40rpx;
+  margin: 0 -46rpx;
   background-color: transparent;
 }
 
